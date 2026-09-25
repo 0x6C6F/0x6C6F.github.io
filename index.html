@@ -116,11 +116,6 @@ h1{font-size:17px;font-weight:500;margin:0 0 14px}
 .sheet .tabs button.on{background:var(--text-primary);color:var(--bg);border-color:var(--text-primary)}
 .sheet .hint{font-size:11px;color:var(--text-muted);margin-top:4px}
 .sheet .err{color:var(--text-tint-crimson,#c0304a);font-size:12px;margin-top:8px}
-.mylist{margin-top:18px;border-top:1px solid var(--border-strong);padding-top:10px}
-.mylist h3{font-size:12px;color:var(--text-secondary);margin:0 0 8px}
-.mylist .row2{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--surface-1)}
-.mylist .row2 .lbl{flex:1}
-.mylist .row2 button{border:none;background:none;color:var(--text-tint-crimson,#c0304a);cursor:pointer;font-size:12px}
 </style>
 </head>
 <body>
@@ -258,11 +253,6 @@ h1{font-size:17px;font-weight:500;margin:0 0 14px}
         <button class="save" id="nSave">Eintragen</button>
       </div>
     </div>
-
-    <div class="mylist">
-      <h3>Einträge (antippen zum Bearbeiten, auch direkt im Kalender)</h3>
-      <div id="myEntries"></div>
-    </div>
   </div>
 </div>
 
@@ -313,8 +303,10 @@ h1{font-size:17px;font-weight:500;margin:0 0 14px}
    bestimmten Tag) kommen aus Collection "days" und sind direkt im Kalender
    antippbar (Person wählen + Zusatztext).
    ========================================================================== */
-const PIN = '4711'; // rein clientseitige Hürde, kein echter Schutz
-const BUILD_VERSION = 14; // bei jeder Code-Änderung hochzählen (unabhängig von Dateninhalten)
+// Der PIN selbst liegt nicht mehr im Code, sondern in einer gesperrten
+// Supabase-Tabelle; geprüft wird er über die RPC-Funktion verify_pin(),
+// die nur wahr/falsch zurückgibt.
+const BUILD_VERSION = 15; // bei jeder Code-Änderung hochzählen (unabhängig von Dateninhalten)
 const SUPABASE_URL = 'https://mneoqfxgfuuhsisuhigv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_eeYLsNyNIw6xZCqmkJHWtw_a3baFWYe'; // öffentlicher Client-Key, per RLS abgesichert
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -460,7 +452,6 @@ function render() {
   document.getElementById('meta').textContent = lastChangedText();
   hidePast();
   syncCellSizing();
-  renderMyEntries();
 }
 
 function hidePast() {
@@ -555,9 +546,13 @@ fab.addEventListener('click', () => {
   if (unlocked()) openAddForm(); else pinOverlay.classList.remove('hidden');
 });
 document.getElementById('pinCancel').addEventListener('click', () => { pendingEditId = null; pendingDayDate = null; pinOverlay.classList.add('hidden'); });
-document.getElementById('pinOk').addEventListener('click', () => {
+document.getElementById('pinOk').addEventListener('click', async () => {
   const v = document.getElementById('pinInput').value.trim();
-  if (v === PIN) {
+  const btn = document.getElementById('pinOk');
+  btn.disabled = true;
+  const { data, error } = await sb.rpc('verify_pin', { candidate: v });
+  btn.disabled = false;
+  if (!error && data === true) {
     try { localStorage.setItem('bp_unlocked', '1'); } catch (e) {}
     pinOverlay.classList.add('hidden');
     document.getElementById('pinInput').value = '';
@@ -588,7 +583,7 @@ document.getElementById('weeks').addEventListener('click', (ev) => {
   }
 });
 
-function openAddForm() { resetFormState(); formOverlay.classList.remove('hidden'); renderMyEntries(); }
+function openAddForm() { resetFormState(); formOverlay.classList.remove('hidden'); }
 function closeForm() { formOverlay.classList.add('hidden'); }
 
 /* ============================ Datums-Picker (Montag zuerst) ================= */
@@ -711,7 +706,6 @@ function openEdit(id) {
     document.getElementById('absDelete').style.display = '';
   }
   formOverlay.classList.remove('hidden');
-  renderMyEntries();
 }
 
 /* ============================ Einzelner Tag ================================= */
@@ -883,21 +877,6 @@ document.getElementById('nSave').addEventListener('click', async () => {
   const ok = await saveEntry({ from, to, cls, person, label, emoji, mode: 'night' });
   if (ok) { resetFormState(); closeForm(); }
 });
-
-function renderMyEntries() {
-  const el = document.getElementById('myEntries');
-  if (!el) return;
-  const upcoming = ENTRIES.filter(e => e.to >= TODAY_S).sort((a, b) => a.from.localeCompare(b.from));
-  if (!upcoming.length) { el.innerHTML = '<div class="hint">Noch keine Einträge.</div>'; return; }
-  el.innerHTML = upcoming.map(e =>
-    '<div class="row2"><span class="lbl" data-edit="' + e.id + '" style="cursor:pointer">' + fmt(e.from) + (e.to !== e.from ? '–' + fmt(e.to) : '') + ' · ' + e.emoji + ' ' + e.label + '</span><button data-id="' + e.id + '">Löschen</button></div>'
-  ).join('');
-  el.querySelectorAll('span[data-edit]').forEach(s => s.addEventListener('click', () => openEdit(s.dataset.edit)));
-  el.querySelectorAll('button[data-id]').forEach(b => b.addEventListener('click', async (ev) => {
-    ev.stopPropagation();
-    await sb.from('entries').delete().eq('id', b.dataset.id);
-  }));
-}
 </script>
 </body>
 </html>
