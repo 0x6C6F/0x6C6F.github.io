@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Betreuung Paula</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%85%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#ffffff;
@@ -306,7 +307,7 @@ h1{font-size:17px;font-weight:500;margin:0 0 14px}
 // Der PIN selbst liegt nicht mehr im Code, sondern in einer gesperrten
 // Supabase-Tabelle; geprüft wird er über die RPC-Funktion verify_pin(),
 // die nur wahr/falsch zurückgibt.
-const BUILD_VERSION = 15; // bei jeder Code-Änderung hochzählen (unabhängig von Dateninhalten)
+const BUILD_VERSION = 16; // bei jeder Code-Änderung hochzählen (unabhängig von Dateninhalten)
 const SUPABASE_URL = 'https://mneoqfxgfuuhsisuhigv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_eeYLsNyNIw6xZCqmkJHWtw_a3baFWYe'; // öffentlicher Client-Key, per RLS abgesichert
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
